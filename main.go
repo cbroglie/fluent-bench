@@ -158,6 +158,7 @@ func main() {
 		}
 	}()
 
+	startTime := time.Now()
 	batchSize, ticker := setThrottle(rate, nil)
 	for i := 0; i < count; i++ {
 		// Send the next record.
@@ -196,8 +197,9 @@ func main() {
 		s.failed.Count(),
 		s.published.Count()-s.processed.Count())
 
-	log.Printf("processed=%-10d p50=%-16s p99=%-16s\n",
+	log.Printf("Processed %d records in %.2f seconds (p50=%s p99=%s)\n",
 		s.processed.Count(),
+		time.Since(startTime).Seconds(),
 		formatDuration(s.processed.Percentile(0.50)),
 		formatDuration(s.processed.Percentile(0.99)))
 }
