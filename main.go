@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/cbroglie/fluent-bench/batcher"
@@ -10,6 +11,7 @@ import (
 )
 
 type stats struct {
+	published metrics.Counter
 	processed metrics.Timer
 	succeeded metrics.Counter
 	failed    metrics.Counter
@@ -127,15 +129,34 @@ func main() {
 	}
 
 	// Hook in go-metrics
+	s.published = metrics.NewCounter()
 	s.processed = metrics.NewTimer()
 	s.succeeded = metrics.NewCounter()
 	s.failed = metrics.NewCounter()
-	metrics.Register("processed", s.processed)
-	metrics.Register("succeeded", s.succeeded)
-	metrics.Register("failed", s.failed)
 
 	b = batcher.New(workers, timeout, batchSize, delay, worker(s, debug), initWorker, shutdownWorker)
 	b.Start()
+
+	var metricsWG sync.WaitGroup
+	metricsWG.Add(1)
+	metricsChan := make(chan struct{})
+	go func() {
+		defer metricsWG.Done()
+		for {
+			select {
+			case _, ok := <-metricsChan:
+				if !ok {
+					return
+				}
+			case <-time.After(1 * time.Second):
+				log.Printf("published=%-10d succeeded=%-10d failed=%-10d inflight=%-10d\n",
+					s.published.Count(),
+					s.succeeded.Count(),
+					s.failed.Count(),
+					s.published.Count()-s.processed.Count())
+			}
+		}
+	}()
 
 	batchSize, ticker := setThrottle(rate, nil)
 	for i := 0; i < count; i++ {
@@ -146,6 +167,7 @@ func main() {
 				"payload": "1,63,1,12213656201,Fuel,consumable,1,,0,Harvester,,,,null,100,2016-04-18,05:39:02,0,cash,1,128657335,,,0,,,0,,0,100,Counter,0,0,0,0,,null,null",
 			},
 		})
+		s.published.Inc(1)
 
 		// Rate limit before continuing.
 		if ticker != nil && i%batchSize == 0 {
@@ -157,14 +179,27 @@ func main() {
 		log.Println("completed work loop")
 	}
 
+	// Short delay to make sure the batcher has picked up everything from the
+	// input channel (it only waits for in flight work to complete, it doesn't
+	// drain the input channel).
+	time.Sleep(10 * time.Millisecond)
+
 	b.Stop()
 
-	log.Printf("processed=%d p50=%s p99=%s\n",
+	// Stop the metrics worker.
+	close(metricsChan)
+	metricsWG.Wait()
+
+	log.Printf("published=%-10d succeeded=%-10d failed=%-10d inflight=%-10d\n",
+		s.published.Count(),
+		s.succeeded.Count(),
+		s.failed.Count(),
+		s.published.Count()-s.processed.Count())
+
+	log.Printf("processed=%-10d p50=%-16s p99=%-16s\n",
 		s.processed.Count(),
 		formatDuration(s.processed.Percentile(0.50)),
 		formatDuration(s.processed.Percentile(0.99)))
-	log.Printf("succeeded=%d\n", s.succeeded.Count())
-	log.Printf("failed=%d\n", s.failed.Count())
 }
 
 func formatDuration(duration float64) string {
