@@ -70,7 +70,7 @@ func initWorker(id int) interface{} {
 	}
 
 	f := &fluent{}
-	if err := f.connect(); err != nil {
+	if err := f.connectTCP(); err != nil {
 		log.Fatal(err)
 	}
 
