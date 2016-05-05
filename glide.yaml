@@ -2,3 +2,5 @@ package: github.com/cbroglie/fluent-bench
 import:
 - package: github.com/rcrowley/go-metrics
 - package: gopkg.in/vmihailenco/msgpack.v2
+- package: github.com/samuel/go-thrift/examples/scribe
+- package: github.com/samuel/go-thrift/thrift
