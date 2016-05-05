@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"sync"
 	"time"
 
+	"github.com/samuel/go-thrift/examples/scribe"
+	"github.com/samuel/go-thrift/thrift"
 	"gopkg.in/vmihailenco/msgpack.v2"
 )
 
@@ -17,18 +18,29 @@ const (
 )
 
 type fluent struct {
-	conn io.WriteCloser
-	mu   sync.Mutex
+	scribe *scribe.ScribeClient
+	conn   io.WriteCloser
 }
 
-func (f *fluent) connect() error {
+func (f *fluent) connectScribe() error {
+	conn, err := net.DialTimeout("tcp", "127.0.0.1:1463", dialTimeout)
+	if err != nil {
+		return err
+	}
+
+	t := thrift.NewTransport(thrift.NewFramedReadWriteCloser(conn, 0), thrift.BinaryProtocol)
+	client := thrift.NewClient(t, false)
+	f.scribe = &scribe.ScribeClient{Client: client}
+
+	return nil
+}
+
+func (f *fluent) connectTCP() error {
 	conn, err := net.DialTimeout("tcp", "127.0.0.1:24224", dialTimeout)
 	if err != nil {
 		return err
 	}
-	f.mu.Lock()
 	f.conn = conn
-	f.mu.Unlock()
 	return nil
 }
 
@@ -36,6 +48,22 @@ func (f *fluent) sendMessage(m *message) error {
 	if m.Time == 0 {
 		m.Time = time.Now().Unix()
 	}
+
+	if f.scribe != nil {
+		b, err := json.Marshal(m.Record)
+		if err != nil {
+			return err
+		}
+		res, err := f.scribe.Log([]*scribe.LogEntry{{m.Tag, string(b)}})
+		if err != nil {
+			return err
+		}
+		if res != scribe.ResultCodeOk {
+			return fmt.Errorf("fluent#sendMessage: send returned %s", res.String())
+		}
+		return nil
+	}
+
 	payload := []interface{}{m.Tag, []interface{}{[]interface{}{m.Time, m.Record}}}
 	b, err := msgpack.Marshal(payload)
 	if err != nil {
@@ -53,13 +81,10 @@ func (f *fluent) send(b []byte) error {
 }
 
 func (f *fluent) close() error {
-	if f.conn == nil {
-		return nil
+	if f.conn != nil {
+		f.conn.Close()
+		f.conn = nil
 	}
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.conn.Close()
-	f.conn = nil
 	return nil
 }
 
@@ -67,12 +92,4 @@ type message struct {
 	Tag    string
 	Time   int64
 	Record map[string]interface{}
-}
-
-func (m *message) MarshalJSON() ([]byte, error) {
-	data, err := json.Marshal(m.Record)
-	if err != nil {
-		return nil, err
-	}
-	return []byte(fmt.Sprintf("[\"%s\",%d,%s,null]", m.Tag, m.Time, data)), nil
 }

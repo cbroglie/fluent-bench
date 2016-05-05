@@ -1,18 +1,23 @@
-hash: 0287f8e39524203b86ac4d1ae183bd064274d8829a470e176490b5e8c48f5dcd
-updated: 2016-05-03T16:21:29.644767073-07:00
+hash: 251702be9dceccd82e2c073ace8c5e4ba9d8d75fe52bc0936592258d41e038ea
+updated: 2016-05-05T13:03:46.569839922-07:00
 imports:
 - name: github.com/golang/protobuf
-  version: 7cc19b78d562895b13596ddce7aafb59dd789318
+  version: 1f161a2d942a4b0d1c4e77d8cef590871a2b26ac
   subpackages:
   - proto
 - name: github.com/rcrowley/go-metrics
-  version: eeba7bd0dd01ace6e690fa833b3f22aaec29af43
+  version: 1f161a2d942a4b0d1c4e77d8cef590871a2b26ac
+- name: github.com/samuel/go-thrift
+  version: 1f161a2d942a4b0d1c4e77d8cef590871a2b26ac
+  subpackages:
+  - examples/scribe
+  - thrift
 - name: golang.org/x/net
-  version: 35ec611a141ee705590b9eb64d673f9e6dfeb1ac
+  version: 1f161a2d942a4b0d1c4e77d8cef590871a2b26ac
   subpackages:
   - context
 - name: google.golang.org/appengine
-  version: e234e71924d4aa52444bc76f2f831f13fa1eca60
+  version: 1f161a2d942a4b0d1c4e77d8cef590871a2b26ac
   subpackages:
   - datastore
   - internal
@@ -23,7 +28,7 @@ imports:
   - internal/log
   - internal/remote_api
 - name: gopkg.in/vmihailenco/msgpack.v2
-  version: cde6785b9011a544c513d7c12bfbfebc9e383b08
+  version: 1f161a2d942a4b0d1c4e77d8cef590871a2b26ac
   subpackages:
   - codes
 devImports: []

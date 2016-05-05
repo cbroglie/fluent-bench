@@ -25,10 +25,11 @@ const (
 )
 
 var (
-	rate    = 0
-	workers = 10
-	count   = 0
-	debug   = false
+	rate      = 0
+	workers   = 10
+	count     = 0
+	useScribe = false
+	debug     = false
 
 	s = &stats{}
 	b *batcher.B
@@ -70,8 +71,14 @@ func initWorker(id int) interface{} {
 	}
 
 	f := &fluent{}
-	if err := f.connect(); err != nil {
-		log.Fatal(err)
+	if useScribe {
+		if err := f.connectScribe(); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		if err := f.connectTCP(); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	return &workerContext{
@@ -117,6 +124,7 @@ func main() {
 	flag.IntVar(&workers, "workers", workers, "number of worker processes")
 	flag.IntVar(&count, "count", count, "number of events to send to fluentd")
 	flag.BoolVar(&debug, "debug", debug, "debug mode")
+	flag.BoolVar(&useScribe, "scribe", useScribe, "use scribe protocol")
 	flag.Parse()
 
 	if count <= 0 {
