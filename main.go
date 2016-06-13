@@ -171,9 +171,13 @@ func main() {
 	for i := 0; i < count; i++ {
 		// Send the next record.
 		b.AddTask(&message{
-			Tag: "kinesis.test",
+			Tag: "ztrack.count",
 			Record: map[string]interface{}{
-				"payload": "1,63,1,12213656201,Fuel,consumable,1,,0,Harvester,,,,null,100,2016-04-18,05:39:02,0,cash,1,128657335,,,0,,,0,,0,100,Counter,0,0,0,0,,null,null",
+				"id": "391e4cd5a739444cb2e51c6a549d287d",
+				"e": "dev",
+				"c": "count",
+				"v": 5,
+				"d": "1,63,1,12213656201,Fuel,consumable,1,,0,Harvester,,,,null,100,2016-04-18,05:39:02,0,cash,1,128657335,,,0,,,0,,0,100,Counter,0,0,0,0,,null,null",
 			},
 		})
 		s.published.Inc(1)
